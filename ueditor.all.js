@@ -17838,18 +17838,20 @@ UE.plugins["lineheight"] = function () {
 UE.plugins["insertcode"] = function () {
     var me = this;
     me.setOpt("insertcode", {
-        as3: "ActionScript3",
+        java: "Java",
+        
         bash: "Bash/Shell",
         cpp: "C/C++",
+        rust: "Rust",
         css: "Css",
+        html: "Html",
         // cf: "CodeFunction",
         "c#": "C#",
         delphi: "Delphi",
         // diff: "Diff",
         erlang: "Erlang",
         groovy: "Groovy",
-        html: "Html",
-        java: "Java",
+        as3: "ActionScript3",
         // jfx: "JavaFx",
         js: "Javascript",
         pl: "Perl",
@@ -17863,6 +17865,7 @@ UE.plugins["insertcode"] = function () {
         vb: "VB",
         xml: "XML",
         mind: "Mind",
+        
     });
 
     /**
