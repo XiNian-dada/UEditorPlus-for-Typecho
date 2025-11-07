@@ -231,26 +231,70 @@ class Plugin implements PluginInterface
      * @return void
      */
     public static function render()
-    {
-        $js = \Typecho\Common::url('UEditorPlus/ueditor.config.js', Options::alloc()->pluginUrl);
-        $js1 = \Typecho\Common::url('UEditorPlus/ueditor.all.js', Options::alloc()->pluginUrl);
-        $js2 = \Typecho\Common::url('UEditorPlus/lang/zh-cn/zh-cn.js', Options::alloc()->pluginUrl);
-        echo '<script type="text/javascript" src="'. $js. '"></script><script type="text/javascript" src="'. $js1. '"></script><script type="text/javascript" src="'. $js2. '"></script>';
-        echo '<script type="text/javascript">
-    //初始化编辑器
+{
+    $js = \Typecho\Common::url('UEditorPlus/ueditor.config.js', Options::alloc()->pluginUrl);
+    $js1 = \Typecho\Common::url('UEditorPlus/ueditor.all.js', Options::alloc()->pluginUrl);
+    $js2 = \Typecho\Common::url('UEditorPlus/lang/zh-cn/zh-cn.js', Options::alloc()->pluginUrl);
+    $autoCompleteJs = \Typecho\Common::url('UEditorPlus/auto-complete.js', Options::alloc()->pluginUrl);
+    
+    echo '<script type="text/javascript" src="'. $js. '"></script>';
+    echo '<script type="text/javascript" src="'. $js1. '"></script>';
+    echo '<script type="text/javascript" src="'. $js2. '"></script>';
+    
+    echo '<script type="text/javascript">
+    // 等待UEditor完全加载后再加载自动补全插件
+    function loadAutoComplete() {
+        if (typeof UE !== "undefined" && UE.plugins) {
+            var script = document.createElement("script");
+            script.src = "'. $autoCompleteJs. '";
+            script.onload = function() {
+                console.log("UEditorPlus自动补全插件加载成功");
+            };
+            script.onerror = function() {
+                console.error("UEditorPlus自动补全插件加载失败");
+            };
+            document.head.appendChild(script);
+        } else {
+            setTimeout(loadAutoComplete, 100);
+        }
+    }
+    
+    // 初始化编辑器
     $(document).ready(function (e) {
-        var ue = UE.getEditor("text",{
-            maximumWords:30000
-        });
+        // 先加载自动补全插件
+        loadAutoComplete();
+        
+        // 延迟初始化编辑器，确保插件已加载
+        setTimeout(function() {
+            var ue = UE.getEditor("text",{
+                maximumWords:30000
+            });
+            
+            // 检查插件是否成功注册
+            ue.addListener("ready", function() {
+                console.log("编辑器准备就绪");
+                if (typeof UE.plugins.autocomplete === "function") {
+                    console.log("自动补全插件已注册");
+                } else {
+                    console.warn("自动补全插件未注册");
+                }
+            });
+        }, 500);
     });
+    
     // 保存草稿时同步
     document.getElementById("btn-save").onclick = function() {
-        ue.sync("text");
+        if (typeof ue !== "undefined") {
+            ue.sync("text");
+        }
     }
+    
     // 提交时同步
     document.getElementById("btn-submit").onclick = function() {
-        ue.sync("text");
+        if (typeof ue !== "undefined") {
+            ue.sync("text");
+        }
     }
     </script>';
-    }
+}
 }
