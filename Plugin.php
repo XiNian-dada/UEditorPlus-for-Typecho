@@ -13,10 +13,11 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
  * UEditor Plus是基于百度UEditor二开的所见即所得富文本编辑器。
  *
  * @package UEditorPlus for Typecho
- * @author jubaoshou
+ * @author jubaoshou & XiNian-dada
  * @version 4.1.0
  * @link https://github.com/jubaoshou/UEditorPlus-for-Typecho
- * Date: 2024-10-30
+ * @link https://github.com/XiNian-dada/UEditorPlus-for-Typecho
+ * Date: 2026-1-18
  */
 class Plugin implements PluginInterface
 {
