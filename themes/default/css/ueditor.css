@@ -2145,3 +2145,12 @@ div.edui-box {
 .edui-quick-operate .icon.icon-trash:before {
     content: "\e87c";
 }
+/* 强制编辑器容器宽度跟随父级 */
+.edui-editor {
+    width: 100% !important;
+}
+
+/* 修复编辑器内部 iframe 容器的宽度 */
+.edui-editor-iframeholder {
+    width: 100% !important;
+}
