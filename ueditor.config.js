@@ -167,24 +167,176 @@
         ]
 
         // 自定义工具栏按钮点击，返回 true 表示已经处理点击，会阻止默认事件
-        , toolbarCallback: function (cmd, editor) {
-            // console.log('toolbarCallback',cmd, editor);
-            // switch(cmd){
-            //   case 'insertimage':
-            //     editor.execCommand('insertHtml', '<p><img src="xxxxx" /></p>');
-            //     console.log('toolbarCallback',cmd, editor)
-            //     return true;
-            //   case 'insertvideo':
-            //     editor.execCommand('insertHtml', '<p><iframe src="xxxxx" /></p>');
-            //     console.log('toolbarCallback',cmd, editor)
-            //     return true;
-            //   case 'attachment':
-            //     console.log('toolbarCallback',cmd, editor)
-            //     editor.execCommand('insertHtml', '<p><a href="xxx.zip">下载文件</a></p>');
-            //     return true;
-            // }
+        ,// ★★★★★ 修复版：强制显示符号键盘 + 更换国内友好源 ★★★★★
+        toolbarCallback: function (cmd, editor) {
+            if (cmd === 'formula') {
+                var dialogId = 'ue-mathlive-dialog';
+                var dialog = document.getElementById(dialogId);
+        
+                // --- 辅助函数：显示弹窗并聚焦 ---
+                var showAndFocus = function() {
+                    if (dialog) {
+                        dialog.style.display = 'flex';
+                        setTimeout(function() {
+                            var mf = document.getElementById('ue-math-field');
+                            if (mf) {
+                                mf.value = ''; // 清空
+                                mf.focus();    // 聚焦
+                                // 强制呼出键盘
+                                if (window.mathVirtualKeyboard) {
+                                    window.mathVirtualKeyboard.show();
+                                }
+                            }
+                        }, 150);
+                    }
+                };
+        
+                // 如果已存在，直接显示
+                if (dialog) {
+                    showAndFocus();
+                    return true;
+                }
+        
+                // --- 首次加载逻辑 ---
+        
+                // 1. 加载提示
+                var loadingTip = document.createElement('div');
+                loadingTip.id = 'ue-loading-tip';
+                loadingTip.innerText = '正在加载公式编辑器...';
+                loadingTip.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.8);color:#fff;padding:15px 25px;border-radius:5px;z-index:100000;font-size:14px;';
+                document.body.appendChild(loadingTip);
+        
+                // 2. 初始化构建函数
+                var initEditor = function() {
+                    var tip = document.getElementById('ue-loading-tip');
+                    if(tip) tip.remove();
+        
+                    // 注入 CSS (保持你之前的 Z-Index 修复)
+                    var css = document.createElement('style');
+                    css.innerHTML = `
+                        .ML__keyboard, 
+                        .math-virtual-keyboard-container,
+                        div[data-ui-type="virtual-keyboard"] {
+                            z-index: 100001 !important;
+                            position: fixed !important;
+                            bottom: 0 !important;
+                        }
+                        .MLK__backdrop {
+                            z-index: 100000 !important;
+                        }
+                    `;
+                    document.head.appendChild(css);
+        
+                    // 创建遮罩
+                    var overlay = document.createElement('div');
+                    overlay.id = dialogId;
+                    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;';
+                    
+                    // 创建弹窗容器
+                    var box = document.createElement('div');
+                    // 宽度设为 750px，稍微宽一点放得下三个按钮
+                    box.style.cssText = 'background:#fff;width:750px;max-width:95%;padding:20px;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.3);display:flex;flex-direction:column;gap:15px;transform:translateY(-10%);';
+                    
+                    var title = document.createElement('h3');
+                    title.innerText = '可视化公式编辑器';
+                    title.style.cssText = 'margin:0;color:#333;font-size:18px;border-bottom:1px solid #eee;padding-bottom:10px;';
+        
+                    // MathLive 编辑区域
+                    var mathContainer = document.createElement('div');
+                    mathContainer.innerHTML = '<math-field id="ue-math-field" style="width:100%; font-size:24px; padding:10px; border:1px solid #ddd; border-radius:4px; min-height:80px; display:block; background:#fff;" math-virtual-keyboard-policy="manual"></math-field>';
+        
+                    // --- 按钮区域 (修改部分) ---
+                    var btnGroup = document.createElement('div');
+                    btnGroup.style.cssText = 'display:flex; justify-content:flex-end; gap:10px;';
+                    
+                    // 1. 取消按钮
+                    var btnClose = document.createElement('button');
+                    btnClose.innerText = '取消';
+                    btnClose.style.cssText = 'padding:8px 15px;border:1px solid #ddd;background:#f8f9fa;color:#666;border-radius:4px;cursor:pointer;font-size:14px;';
+                    
+                    // 2. 插入行内公式按钮 ($)
+                    var btnInsertInline = document.createElement('button');
+                    btnInsertInline.innerHTML = '插入<b>行内</b>公式 ($)';
+                    // 绿色风格，区分于蓝色
+                    btnInsertInline.style.cssText = 'padding:8px 15px;border:none;background:#28a745;color:#fff;border-radius:4px;cursor:pointer;font-size:14px;';
+                    
+                    // 3. 插入块级公式按钮 ($$)
+                    var btnInsertBlock = document.createElement('button');
+                    btnInsertBlock.innerHTML = '插入<b>独占行</b>公式 ($$)';
+                    // 蓝色风格 (主按钮)
+                    btnInsertBlock.style.cssText = 'padding:8px 15px;border:none;background:#007bff;color:#fff;border-radius:4px;cursor:pointer;font-size:14px;';
+        
+                    btnGroup.appendChild(btnClose);
+                    btnGroup.appendChild(btnInsertInline);
+                    btnGroup.appendChild(btnInsertBlock);
+                    
+                    box.appendChild(title);
+                    box.appendChild(mathContainer);
+                    box.appendChild(btnGroup);
+                    overlay.appendChild(box);
+                    document.body.appendChild(overlay);
+        
+                    // --- 事件处理逻辑 ---
+                    
+                    // 关闭函数
+                    var closeFn = function() { 
+                        overlay.style.display = 'none'; 
+                        if (window.mathVirtualKeyboard) window.mathVirtualKeyboard.hide();
+                    };
+                    
+                    // 获取 LaTeX 的通用函数
+                    var getLatex = function() {
+                        var mf = document.getElementById('ue-math-field');
+                        var latex = mf.getValue('latex-expanded');
+                        if (!latex) latex = mf.getValue();
+                        return latex;
+                    };
+        
+                    btnClose.onclick = closeFn;
+                    overlay.onclick = function(e) { if(e.target === overlay) closeFn(); };
+        
+                    // ★ 插入行内公式 ($ ... $)
+                    btnInsertInline.onclick = function() {
+                        var latex = getLatex();
+                        if (latex) {
+                            // 前后加空格防止 markdown 解析错误
+                            editor.execCommand('insertHtml', ' $' + latex + '$ ');
+                        }
+                        closeFn();
+                    };
+        
+                    // ★ 插入块级公式 ($$ ... $$)
+                    btnInsertBlock.onclick = function() {
+                        var latex = getLatex();
+                        if (latex) {
+                            editor.execCommand('insertHtml', ' $$ ' + latex + ' $$ ');
+                        }
+                        closeFn();
+                    };
+        
+                    // 初始化显示
+                    showAndFocus();
+                };
+        
+                // 3. 动态加载脚本
+                var link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'https://cdn.jsdelivr.net/npm/mathlive/dist/mathlive-static.css';
+                document.head.appendChild(link);
+        
+                var script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/mathlive/dist/mathlive.min.js';
+                script.onload = initEditor;
+                script.onerror = function() {
+                    var tip = document.getElementById('ue-loading-tip');
+                    if(tip) tip.remove();
+                    alert("错误：无法加载 MathLive 组件。");
+                };
+                document.head.appendChild(script);
+        
+                return true; 
+            }
         }
-
         // 自定义上传功能
         , uploadServiceEnable: false
         // 自定义上传函数，需要在这个函数中实现自定义上传逻辑
@@ -210,6 +362,77 @@
             //     },500);
             // }
             // call();
+        }// xss 过滤白名单 名单来源: https://raw.githubusercontent.com/fex-team/ueditor/master/ueditor.config.js
+        , whitList: {
+            a:      ['target', 'href', 'title', 'class', 'style'],
+            abbr:   ['title', 'class', 'style'],
+            address: ['class', 'style'],
+            area:   ['shape', 'coords', 'href', 'alt'],
+            article: [],
+            aside:  [],
+            audio:  ['autoplay', 'controls', 'loop', 'preload', 'src', 'class', 'style'],
+            b:      ['class', 'style'],
+            bdi:    ['dir'],
+            bdo:    ['dir'],
+            big:    [],
+            blockquote: ['cite', 'class', 'style'],
+            br:     [],
+            caption: ['class', 'style'],
+            center: [],
+            cite:   [],
+            
+            // ★★★ 核心修改 1：必须允许 code 标签，且允许 class 属性 (为了 Prism) ★★★
+            code:   ['class', 'style'],
+            
+            col:    ['align', 'valign', 'span', 'width', 'class', 'style'],
+            colgroup: ['align', 'valign', 'span', 'width', 'class', 'style'],
+            dd:     ['class', 'style'],
+            del:    ['datetime'],
+            details: ['open'],
+            div:    ['class', 'style'],
+            dl:     ['class', 'style'],
+            dt:     ['class', 'style'],
+            em:     ['class', 'style'],
+            font:   ['color', 'size', 'face'],
+            footer: [],
+            h1:     ['class', 'style'],
+            h2:     ['class', 'style'],
+            h3:     ['class', 'style'],
+            h4:     ['class', 'style'],
+            h5:     ['class', 'style'],
+            h6:     ['class', 'style'],
+            header: [],
+            hr:     [],
+            i:      ['class', 'style'],
+            img:    ['src', 'alt', 'title', 'width', 'height', 'id', '_src', 'loadingclass', 'class', 'data-latex'],
+            ins:    ['datetime'],
+            li:     ['class', 'style'],
+            mark:   [],
+            nav:    [],
+            ol:     ['class', 'style'],
+            p:      ['class', 'style'],
+            
+            // ★★★ 核心修改 2：pre 标签必须允许 class 和 style ★★★
+            pre:    ['class', 'style'],
+            
+            s:      [],
+            section:[],
+            small:  [],
+            span:   ['class', 'style'],
+            sub:    ['class', 'style'],
+            sup:    ['class', 'style'],
+            strong: ['class', 'style'],
+            table:  ['width', 'border', 'align', 'valign', 'class', 'style'],
+            tbody:  ['align', 'valign', 'class', 'style'],
+            td:     ['width', 'rowspan', 'colspan', 'align', 'valign', 'class', 'style'],
+            tfoot:  ['align', 'valign', 'class', 'style'],
+            th:     ['width', 'rowspan', 'colspan', 'align', 'valign', 'class', 'style'],
+            thead:  ['align', 'valign', 'class', 'style'],
+            tr:     ['rowspan', 'align', 'valign', 'class', 'style'],
+            tt:     [],
+            u:      [],
+            ul:     ['class', 'style'],
+            video:  ['autoplay', 'controls', 'loop', 'preload', 'src', 'height', 'width', 'class', 'style']
         }
 
         // 插入图片自定义配置
@@ -278,7 +501,7 @@
         // 自动保存
         , autoSaveEnable: true
         // 浏览器初始化时自动恢复上一次的内容
-        , autoSaveRestore: false
+        , autoSaveRestore: true
         // 自动保存Key，为空时根据网址自动计算
         , autoSaveKey: null
 
