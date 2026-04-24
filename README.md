@@ -1,3 +1,6 @@
+# 项目已归档, 如果期待使用更好地编辑器, 请搜索 Vditor4Typecho
+
+
 # UEditorPlus for Typecho
 
 基于 [https://github.com/LinkPoly/UEditor-for-Typecho](https://github.com/LinkPoly/UEditor-for-Typecho) 和 [https://github.com/modstart-lib/ueditor-plus](https://github.com/modstart-lib/ueditor-plus) 二次开发的 Typecho 编辑器插件。
